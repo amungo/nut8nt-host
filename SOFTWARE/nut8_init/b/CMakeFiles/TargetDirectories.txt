@@ -1,0 +1,14 @@
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/CMakeFiles/install/strip.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/CMakeFiles/install/local.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/CMakeFiles/edit_cache.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/CMakeFiles/nut8_init.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/CMakeFiles/rebuild_cache.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/CMakeFiles/list_install_components.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/CMakeFiles/install.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/ad9361_no_os_driver/CMakeFiles/install/strip.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/ad9361_no_os_driver/CMakeFiles/install/local.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/ad9361_no_os_driver/CMakeFiles/edit_cache.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/ad9361_no_os_driver/CMakeFiles/ad9361_no_os_driver_l.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/ad9361_no_os_driver/CMakeFiles/rebuild_cache.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/ad9361_no_os_driver/CMakeFiles/list_install_components.dir
+/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/nut8_init/b/ad9361_no_os_driver/CMakeFiles/install.dir

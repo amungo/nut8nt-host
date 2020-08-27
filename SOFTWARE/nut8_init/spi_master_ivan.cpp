@@ -36,6 +36,10 @@ SPIMaster::~SPIMaster()
     Close();
 }
 
+int32_t SPIMaster::GetFD() {
+    return m_fd;
+}
+
 int32_t SPIMaster::Open(const std::string& _dev)
 {
     printf("Open %s\n", _dev.data());

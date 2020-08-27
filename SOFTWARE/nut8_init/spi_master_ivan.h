@@ -27,6 +27,7 @@ public:
     int32_t SetBitsPerMode(uint8_t _bits);
     int32_t SetSpeed(uint32_t _speed);
     int32_t SetDelay(uint16_t _delay);
+    int32_t GetFD();
 
     int32_t readReg(uint8_t _address, uint8_t* _data);
     int32_t transmitData(uint8_t* _tx_buf, uint8_t* _rx_buf, int length);

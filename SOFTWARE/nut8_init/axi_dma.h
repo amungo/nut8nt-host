@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 
 #include "gpio.h"
+#include "defines.h"
 
 
 #define BUFFER_SIZE	(500 * 1024 * 1024)

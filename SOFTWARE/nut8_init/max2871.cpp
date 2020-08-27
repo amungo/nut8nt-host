@@ -7,9 +7,19 @@ static uint32_t max_config[SIZE_MAX2871_CONFIG] = {
     0x200103E9,
     0x12005F42,
     0x01009F23,
-    0x61E900DC,//0x61E900DC - 80; 0x61D900DC - 160
+    0x61E901FC,//0x61E900DC - 80; 0x61D900DC - 160
     0x00440005
 };
+
+//static uint32_t max_config[SIZE_MAX2871_CONFIG] = {
+//    0x01000000,
+//    0x400103E9,
+//    0x10005F4A,
+//    0x00001F23,
+//    0x61E901FC,//0x61E900DC - 80; 0x61D900DC - 160
+//    0x00400005
+//};
+
 
 static uint32_t max_registers [SIZE_MAX2871_CONFIG];
 
@@ -52,6 +62,7 @@ void MAX2871::checkDevice() {
 
     if (id == 0b0110 || id == 0b0111) {
         std::cout << " MAX2871" << std::endl;
+        //std::cout << " VCO: " << ((read_data >> 3) & 0b111111) << std::endl;
     }
     else {
         std::cout << " Not MAX2871 detect (" << std::hex << (int)read_data << std::dec << ")." << std::endl;

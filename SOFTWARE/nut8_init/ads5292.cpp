@@ -38,14 +38,21 @@ void ADS5292::setRamp() {
     writeToADS5292(0x25, 0x40); // set SYNC0x42
 }
 
+void ADS5292::setGain(uint64_t gain) {
+    std::cout << "0x2A << 0x" << std::hex << (gain & 0xFFFF) << std::dec << std::endl;
+    writeToADS5292(0x2A, gain & 0xFFFF);
+    std::cout << "0x2B << 0x" << std::hex << ((gain >> 16) & 0xFFFF) << std::dec << std::endl;
+    writeToADS5292(0x2B, (gain >> 16) & 0xFFFF);
+}
+
 void ADS5292::setData() {
     writeToADS5292(0x45, 0x0);
-//    writeToADS5292(0x2A, 0xCCCC);
-//    writeToADS5292(0x2B, 0xCCCC);
+    writeToADS5292(0x2A, 0xCCCC);
+    writeToADS5292(0x2B, 0xCCCC);
 //    writeToADS5292(0x2A, 0x8888);
 //    writeToADS5292(0x2B, 0x8888);
-    writeToADS5292(0x2A, 0x0);
-    writeToADS5292(0x2B, 0x0);
+//    writeToADS5292(0x2A, 0x0);
+//    writeToADS5292(0x2B, 0x0);
 }
 
 

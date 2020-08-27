@@ -1,0 +1,6 @@
+#ifndef XPARAMETERS_H
+#define XPARAMETERS_H
+
+#define XPAR_M_AXI_AD9364_BASEADDR 0x80000000
+
+#endif

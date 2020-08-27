@@ -1,6 +1,6 @@
 #include "axi_dma.h"
 
-AXI_DMA::AXI_DMA() : fifo_run(88, GPIO_DIR_OUT) {
+AXI_DMA::AXI_DMA() : fifo_run(GPIO_PIN_FIFO_RUN, GPIO_DIR_OUT) {
     rx_proxy_fd = open("/dev/dma_proxy_rx", O_RDWR);
     if (rx_proxy_fd < 1) {
         printf("Unable to open DMA proxy device file");

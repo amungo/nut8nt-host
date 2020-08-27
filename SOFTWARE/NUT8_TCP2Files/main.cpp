@@ -7,31 +7,51 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctime>
+#include <signal.h>
 
 #define BUFFER_SIZE (1024)
 #define CHANNEL_NUM 8
 
 using namespace std;
 
+int sock, listener;
+
+void sig_int_handler(int signo) {
+    cout << "Stopping programm" << endl;
+
+    if (listener)
+        close(listener);
+
+    if (sock)
+        close(sock);
+
+    exit(-1);
+}
+
 int main()
 {
     cout << "Init TCP Server for NUT8NT" << endl;
 
-    int sock, listener;
+    signal(SIGINT, sig_int_handler);
+    signal(SIGTERM, sig_int_handler);
+
     struct sockaddr_in addr;
     char buf[BUFFER_SIZE];
     int16_t* buf16 = (int16_t*)buf;
 
     int16_t channelBuf16[CHANNEL_NUM][BUFFER_SIZE/CHANNEL_NUM];
     int8_t channelBuf8[CHANNEL_NUM][BUFFER_SIZE/CHANNEL_NUM];
+    int64_t rawBuf[BUFFER_SIZE];
+
     ofstream file8[CHANNEL_NUM];
     ofstream file16[CHANNEL_NUM];
+    ofstream fileRaw;
 
     auto rawData = time(nullptr);
     auto date = localtime(&rawData);
 
+    char fileName[128] = {0};
     for (int i=0; i < CHANNEL_NUM; i++) {
-        char fileName[128] = {0};
         sprintf(fileName, "Dump_%.2d.%.2d.%.2d_%.2d.%.2d_channel%d.int8", date->tm_mday, date->tm_mon + 1, 1900 + date->tm_year, date->tm_hour, date->tm_min, i+1);
 
         file8[i].open(fileName);
@@ -41,6 +61,9 @@ int main()
 
         file16[i].open(fileName);
     }
+
+    sprintf(fileName, "Dump_%.2d.%.2d.%.2d_%.2d.%.2d.int64", date->tm_mday, date->tm_mon + 1, 1900 + date->tm_year, date->tm_hour, date->tm_min);
+    fileRaw.open(fileName);
 
     cout << "Create TCP Server for NUT8NT" << endl;
 
@@ -73,6 +96,10 @@ int main()
     unsigned long totalRead = 0;
     unsigned int offsert = 0;
 
+    int size;
+    int ret = recv(sock, &size, sizeof(size), 0);
+    int last_prog = 0;
+
     while(1) {
         int ret = recv(sock, buf + offsert, sizeof(buf), 0);
 
@@ -88,10 +115,13 @@ int main()
             offsert = ret % 16;
             ret -= offsert;
 
-            if (ret % 16) {
-                cout << "ret = " << ret << endl;
-            }
             totalRead += ret;
+
+            int prog = totalRead * 100 / size;
+            if (last_prog != prog) {
+                cout << totalRead << "/" << size << " (" << prog << "%)" << endl;
+                last_prog = prog;
+            }
 
             for (int i=0; i < ret/2; i += CHANNEL_NUM) {
                 for (int j=0; j < CHANNEL_NUM; j++) {
@@ -105,6 +135,7 @@ int main()
                 file16[i].write((char*)(channelBuf16[i]), ret/8);
             }
 
+            fileRaw.write(buf, ret);
             memcpy(buf, buf+ret, offsert);
 
         }
@@ -118,6 +149,7 @@ int main()
     cout << "Recieved " << totalRead/1024/1024 << "MB" << endl;
 
     close(sock);
+    close(listener);
 
     return 0;
 }

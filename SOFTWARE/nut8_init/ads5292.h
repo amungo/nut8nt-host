@@ -14,6 +14,8 @@ public:
     void setData();
     void checkDevice() override;
     void writeToADS5292(int adr, int val);
+    void setGain(uint64_t);
+
     uint16_t readFromADS5292();
     void reset();
 private:

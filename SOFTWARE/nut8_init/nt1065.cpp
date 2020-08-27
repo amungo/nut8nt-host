@@ -45,7 +45,8 @@ void NT1065::config(const std::string& cfg) {
     int regVal_i;
     file >> regName_s;
 
-    for (int i=0; i<48; i++) {
+    //for (int i=0; i<48; i++) {
+    while (!file.eof()) {
         file >> regName_s >> regVal_s;
         //std::cout << " REG: " << regName_s << "\t Data:   " << std::hex << regVal_s << std::dec << std::endl;
         regAddr_i = std::stoi(regName_s.substr(3));
