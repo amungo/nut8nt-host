@@ -1,5 +1,7 @@
-#include "ad9361class.h"
-#include "ad9361cfg.h"
+#include <stdio.h>
+#include "ad9361_api.h"
+#include <sys/ioctl.h>
+#include <linux/spi/spidev.h>
 
 AD9361_InitParam default_init_param = {
     /* Device selection */
@@ -263,43 +265,41 @@ AD9361_TXFIRConfig tx_fir_config = {
     29417983 // tx_bandwidth
 };
 
-AD9361_C::AD9361_C(const std::string& dev) : SPIMaster(dev), RST(GPIO_PIN_AD9361_RESET, GPIO_DIR_OUT), TX_EN(GPIO_PIN_AD9361_TX_EN, GPIO_DIR_OUT), RX_EN(GPIO_PIN_AD9361_RX_EN, GPIO_DIR_OUT)  {
+struct ad9361_rf_phy *ad9361_phy;
+
+int main()
+{
     default_init_param.gpio_resetb = GPIO_PIN_AD9361_RESET;
     default_init_param.gpio_sync = -1;
     default_init_param.gpio_cal_sw1 = -1;
     default_init_param.gpio_cal_sw2 = -1;
 
-    RST.out(1);
-    usleep(10000);
-    RST.out(0);
-    usleep(10000);
-    RST.out(1);
-    usleep(10000);
-
-    //RX_EN.out(1);
-    //TX_EN.out(1);
+//    RST.out(1);
+//    usleep(10000);
+//    RST.out(0);
+//    usleep(10000);
+//    RST.out(1);
+//    usleep(10000);
 
     uint8_t mode = 0x01;
     int res = ioctl(GetFD(), SPI_IOC_WR_MODE, &mode);
 
-    //printf("set mode to 0x%X, res=%d\n", mode, res);
+    printf("set mode to 0x%X, res=%d\n", mode, res);
 
     uint8_t buf[4];
     uint8_t buf2[4];
     int32_t ret;
 
     uint16_t cmd;
+    cmd = AD_READ | AD_CNT(1) | AD_ADDR(REG_PRODUCT_ID);
+    buf[0] = cmd >> 8;
+    buf[1] = cmd & 0xFF;
 
-    for (int i=0; i<1; i++) {
+   // ret = spi_write_then_read(spi, &buf[0], 2, rbuf, num);
 
-        cmd = AD_READ | AD_CNT(1) | AD_ADDR(REG_PRODUCT_ID + i);
-        buf[0] = cmd >> 8;
-        buf[1] = cmd & 0xFF;
+    //ret = ad9361_spi_readm(spi, REG_TEMPERATURE, &buf, 1);
+    transmitData((uint8_t*)&buf, (uint8_t*)&buf2, 3);
 
-        transmitData((uint8_t*)&buf, (uint8_t*)&buf2, 3);
-        printf(" AD9361 REG_PRODUCT_ID = 0x%X\n", buf2[2]);
-    }
-/*
     default_init_param.dev_sel = ID_AD9364;
     uint8_t Status = ad9361_init(&ad9361_phy, &default_init_param);
     if(Status){
@@ -329,29 +329,5 @@ AD9361_C::AD9361_C(const std::string& dev) : SPIMaster(dev), RST(GPIO_PIN_AD9361
 // swap channel for predict spetral inversion
     confreg0 |= PP_RX_SWAP_IQ | PP_TX_SWAP_IQ;
     ad9361_spi_write(ad9361_phy->spi, REG_PARALLEL_PORT_CONF_1,confreg0);
-*/
-    return;
-}
-
-void AD9361_C::checkDevice() {
-    std::cout << "Check NT1065 on " << dev << std::endl;
-    uint8_t rx;
-    readReg(0x00, &rx);
-
-    if (rx == 0b00100001) {
-        readReg(0x01, &rx);
-        std::cout << " NT1065 ver. " << (rx & 0b111) << std::endl;
-    }
-    else {
-        std::cout << " Not NT1065 detect (" << std::hex << (int)rx << std::dec << ")." << std::endl;
-        return;
-    }
-
-    readReg(44, &rx);
-
-    if (rx & 1) {
-        std::cout << " PLL locked" << std::endl;
-    } else {
-        std::cout << " PLL NOT locked" << std::endl;
-    }
+    return 0;
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.11.0, 2020-09-07T18:09:58. -->
+<!-- Written by QtCreator 4.11.0, 2020-08-20T16:31:20. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -76,7 +76,7 @@
      <value type="QString">CMAKE_PREFIX_PATH:STRING=%{Qt:QT_INSTALL_PREFIX}</value>
      <value type="QString">QT_QMAKE_EXECUTABLE:STRING=%{Qt:qmakeExecutable}</value>
     </valuelist>
-    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/build-nut8_init-petalinux_aarch64-Debug</value>
+    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/def/Workspace/Work/build-NUT8_AD_Test-petalinux_aarch64-Debug</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
       <value type="QString" key="CMakeProjectManager.MakeStep.AdditionalArguments"></value>
@@ -119,7 +119,7 @@
      <value type="QString">CMAKE_PREFIX_PATH:STRING=%{Qt:QT_INSTALL_PREFIX}</value>
      <value type="QString">QT_QMAKE_EXECUTABLE:STRING=%{Qt:qmakeExecutable}</value>
     </valuelist>
-    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/build-nut8_init-petalinux_aarch64-Release</value>
+    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/def/Workspace/Work/build-NUT8_AD_Test-petalinux_aarch64-Release</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
       <value type="QString" key="CMakeProjectManager.MakeStep.AdditionalArguments"></value>
@@ -162,7 +162,7 @@
      <value type="QString">CMAKE_PREFIX_PATH:STRING=%{Qt:QT_INSTALL_PREFIX}</value>
      <value type="QString">QT_QMAKE_EXECUTABLE:STRING=%{Qt:qmakeExecutable}</value>
     </valuelist>
-    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/build-nut8_init-petalinux_aarch64-RelWithDebInfo</value>
+    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/def/Workspace/Work/build-NUT8_AD_Test-petalinux_aarch64-RelWithDebInfo</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
       <value type="QString" key="CMakeProjectManager.MakeStep.AdditionalArguments"></value>
@@ -205,7 +205,7 @@
      <value type="QString">CMAKE_PREFIX_PATH:STRING=%{Qt:QT_INSTALL_PREFIX}</value>
      <value type="QString">QT_QMAKE_EXECUTABLE:STRING=%{Qt:qmakeExecutable}</value>
     </valuelist>
-    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/def/Workspace/nut8/NUT8NT_Petalinux_system_amungo_git/nut8nt-host/SOFTWARE/build-nut8_init-petalinux_aarch64-MinSizeRel</value>
+    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/def/Workspace/Work/build-NUT8_AD_Test-petalinux_aarch64-MinSizeRel</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
       <value type="QString" key="CMakeProjectManager.MakeStep.AdditionalArguments"></value>
@@ -249,7 +249,7 @@
       <valuelist type="QVariantList" key="RemoteLinux.MakeInstall.BuildTargets"/>
       <value type="bool" key="RemoteLinux.MakeInstall.Clean">false</value>
       <value type="bool" key="RemoteLinux.MakeInstall.CleanInstallRoot">false</value>
-      <value type="QString" key="RemoteLinux.MakeInstall.InstallRoot">/tmp/QtCreator-LIGNnR</value>
+      <value type="QString" key="RemoteLinux.MakeInstall.InstallRoot">/tmp/QtCreator-bzPgKe</value>
       <value type="QString" key="RemoteLinux.MakeInstall.Make">/usr/local/bin/cmake</value>
       <value type="QString" key="RemoteLinux.MakeInstall.MakeArguments">--build . --target install</value>
       <value type="QString" key="RemoteLinux.MakeInstall.MakeCommand">/usr/local/bin/cmake</value>
@@ -354,9 +354,9 @@
     </valuelist>
     <value type="int" key="PE.EnvironmentAspect.Base">1</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">nut8_init (on Nuttmp)</value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">RemoteLinuxRunConfiguration:nut8_init</value>
-    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">nut8_init</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">NUT8_AD_Test (on NUT8)</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">RemoteLinuxRunConfiguration:NUT8_AD_Test</value>
+    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">NUT8_AD_Test</value>
     <value type="int" key="RemoteLinux.EnvironmentAspect.Version">1</value>
     <value type="QString" key="RemoteLinux.RunConfig.AlternateRemoteExecutable"></value>
     <value type="bool" key="RemoteLinux.RunConfig.UseAlternateRemoteExecutable">false</value>

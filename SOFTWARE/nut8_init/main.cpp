@@ -24,11 +24,17 @@ using namespace std;
 
 GPIO** test;
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        std::cout << "Usage: " << argv[0] << " cfgPath" << std::endl;
+        return 0;
+    }
+
+
     cout << "   === Start NUT8_init ===" << endl;
     AD9361_C ad(SPI_ADDR_AD9361);
 
-    ConfigReader cr("NUT8NT.cfg");
+    ConfigReader cr(argv[1]);
 
     if (!cr.isOpen()) {
         cout << "Exit" << endl;
@@ -56,8 +62,8 @@ int main() {
     GPIO GENA(GPIO_PIN_AD9361_GEN_ENA, GPIO_DIR_OUT);
     GENA.out(1);
 
-    nt1.config(cr.readNT1065ConfigPath());
-    nt2.config(cr.readNT1065ConfigPath());
+    nt1.config(cr.readNT1065ConfigPath(0));
+    nt2.config(cr.readNT1065ConfigPath(1));
 
     nt1.checkDevice();
     nt2.checkDevice();

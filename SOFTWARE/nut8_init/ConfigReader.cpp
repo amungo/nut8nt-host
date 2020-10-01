@@ -12,11 +12,15 @@ ConfigReader::ConfigReader(std::string fileName) {
 
 	while (!file.eof()) {
 		file >> param >> val;
-		//std::cout << param << " " << val << std::endl;
+        std::cout << "Read config: " << param << " " << val << std::endl;
 
-		if (param == "nt1065_cfg_path") {
-			cfgP = val;
+        if (param == "nt1065_1_cfg_path") {
+            cfgP[0] = val;
 		} else
+
+        if (param == "nt1065_2_cfg_path") {
+            cfgP[1] = val;
+        } else
 
 		if (param == "ads5292_gain") {
 			adsGain = std::stoll(val, 0, 16);
@@ -25,6 +29,9 @@ ConfigReader::ConfigReader(std::string fileName) {
 		if (param == "max5292_val") {
 			maxVal = std::stoi(val, 0, 16);
 		}
+        else {
+            std::cout << " Wrong parameter: " << param << std::endl;
+        }
 	}
 
 
@@ -35,8 +42,8 @@ bool ConfigReader::isOpen() {
     return file.is_open();
 }
 
-std::string ConfigReader::readNT1065ConfigPath() {
-	return cfgP;
+std::string ConfigReader::readNT1065ConfigPath(int nt1065Num) {
+    return cfgP[nt1065Num];
 }
 
 uint64_t ConfigReader::readADS5292Gain() {
