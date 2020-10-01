@@ -14,11 +14,19 @@
 #include "GNU_UDP_client.h"
 #include "dma-proxy.h"
 
-#define PERIOD 4
+
+
+#define PERIOD      80
+#define BUFF_COUNT  8000
+#define BUFF_SIZE   (1024*32)
+#define TIMEOUT     0
+#define SEND_SIZE 1024*16
 
 using namespace std;
 
 struct dma_proxy_channel_interface *rx_proxy_interface_p;
+char* buff_ptr[BUFF_COUNT/PERIOD];
+char sendbuff[BUFF_SIZE * PERIOD];
 uint32_t* status_reg;
 int rx_proxy_fd;
 GPIO FIFO(88, GPIO_DIR_OUT);
@@ -32,17 +40,28 @@ int ch = 0;
 void init(int bn, int len);
 void startCyclic(int c, int timeout);
 
-void callbackf(int n, siginfo_t *info, void *unused) {
+int iter;
 
-    if (evt_count % 128 == 0) {
-        uint16_t b[1024];
-        for (int i=0; i<1024; i++) {
-            b[i] = ((uint16_t*) rx_proxy_interface_p->buffer)[i*8 + ch];
-        }
-        client->send((char*)b, 1024);
+void callbackf(int n, siginfo_t *info, void *unused) {
+    int iter_test;
+    if (evt_count > 10) {
+        iter_test = iter;
+        iter = (iter + 1) % (BUFF_COUNT/PERIOD);
     }
 
-    //fast_check(buff_ptr[(evt_count*PERIOD) % rx_proxy_interface_p->buf_num], rx_proxy_interface_p->length*PERIOD);
+    int it=0;
+
+    for (int i=0; i < (SEND_SIZE); i+= 4) {
+
+        int32_t data = ((int32_t*)(buff_ptr[iter]))[i + ch];
+        int16_t* data_ptr = (int16_t*)&data;
+        ((float*)sendbuff)[it++] = data_ptr[1];
+        ((float*)sendbuff)[it++] = data_ptr[0];
+    }
+
+
+    //printf("%d) send %d\n", evt_count, it*sizeof(float));
+    client->send(sendbuff, it*sizeof(float));
 
     if (status_reg[0] & (1 << 29)) {
         fifo_full++;
@@ -61,11 +80,21 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    init(512, 8192);
+    init(BUFF_COUNT, BUFF_SIZE);
+
+
+    pthread_t th;
+    //pthread_create(&th, NULL, thread_f, NULL);
+
+    printf("generate ptr table\n");
+    for (int i=0; i<BUFF_COUNT/PERIOD; i++) {
+        buff_ptr[i] = (char*)&(rx_proxy_interface_p->buffer[i * BUFF_SIZE * PERIOD]);
+    }
+
     ch = argv[2][0] - '0';
     client = new udp_client(argv[1], 30137);
 
-    startCyclic(-100, 50);
+    startCyclic(-100, 1500);
 
     cout << "last data [" << ((uint16_t*) rx_proxy_interface_p->buffer)[0] << ", " << ((uint16_t*) rx_proxy_interface_p->buffer)[1] << "]" << endl;
     cout << "evt_count = " << evt_count * PERIOD << endl;

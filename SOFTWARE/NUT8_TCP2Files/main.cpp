@@ -9,21 +9,58 @@
 #include <ctime>
 #include <signal.h>
 
-#define BUFFER_SIZE (1024)
+#define BUFFER_SIZE (1024*1024)
 #define CHANNEL_NUM 8
+#define SAMPLE_SIZE 4 //byte
+#define SAMPLE_IQ   2 //1 - S1,S2,S3... 2 - [I1,Q1],[I2,Q2]...
+#define SKIP_BYTES  (0)
+
+//#define USE_EXTRACT
 
 using namespace std;
 
+void getData(int size);
+void getInfData(int chanNum);
+
 int sock, listener;
+
+int16_t channelBuf16[CHANNEL_NUM][BUFFER_SIZE/CHANNEL_NUM];
+float channelBufGR32[CHANNEL_NUM][BUFFER_SIZE/CHANNEL_NUM];
+int8_t channelBuf8[CHANNEL_NUM][BUFFER_SIZE/CHANNEL_NUM];
+int64_t rawBuf[BUFFER_SIZE];
+
+#ifdef USE_EXTRACT
+ofstream file8[CHANNEL_NUM];
+ofstream file16[CHANNEL_NUM];
+ofstream fileGR32[CHANNEL_NUM];
+#endif
+ofstream fileRaw;
+
+struct sockaddr_in addr;
+char buf[BUFFER_SIZE];
+int16_t* buf16;
+unsigned long totalRead = 0;
 
 void sig_int_handler(int signo) {
     cout << "Stopping programm" << endl;
 
+    cout << "Total read = " << totalRead/1024 << " KByte" << endl;
     if (listener)
         close(listener);
 
     if (sock)
         close(sock);
+
+#ifdef USE_EXTRACT
+    for (int i=0; i < CHANNEL_NUM; i++) {
+        if (file8[i].is_open())
+            file8[i].close();
+        if (file16[i].is_open())
+            file16[i].close();
+        if (fileGR32[i].is_open())
+            fileGR32[i].close();
+    }
+#endif
 
     exit(-1);
 }
@@ -35,22 +72,13 @@ int main()
     signal(SIGINT, sig_int_handler);
     signal(SIGTERM, sig_int_handler);
 
-    struct sockaddr_in addr;
-    char buf[BUFFER_SIZE];
-    int16_t* buf16 = (int16_t*)buf;
-
-    int16_t channelBuf16[CHANNEL_NUM][BUFFER_SIZE/CHANNEL_NUM];
-    int8_t channelBuf8[CHANNEL_NUM][BUFFER_SIZE/CHANNEL_NUM];
-    int64_t rawBuf[BUFFER_SIZE];
-
-    ofstream file8[CHANNEL_NUM];
-    ofstream file16[CHANNEL_NUM];
-    ofstream fileRaw;
+    buf16 = (int16_t*)buf;
 
     auto rawData = time(nullptr);
     auto date = localtime(&rawData);
 
     char fileName[128] = {0};
+#ifdef USE_EXTRACT
     for (int i=0; i < CHANNEL_NUM; i++) {
         sprintf(fileName, "Dump_%.2d.%.2d.%.2d_%.2d.%.2d_channel%d.int8", date->tm_mday, date->tm_mon + 1, 1900 + date->tm_year, date->tm_hour, date->tm_min, i+1);
 
@@ -60,7 +88,11 @@ int main()
         fileName[strlen(fileName)] = '6';
 
         file16[i].open(fileName);
+
+        sprintf(fileName, "Dump_%.2d.%.2d.%.2d_%.2d.%.2d_channel%d.grc32", date->tm_mday, date->tm_mon + 1, 1900 + date->tm_year, date->tm_hour, date->tm_min, i+1);
+        fileGR32[i].open(fileName);
     }
+#endif
 
     sprintf(fileName, "Dump_%.2d.%.2d.%.2d_%.2d.%.2d.int64", date->tm_mday, date->tm_mon + 1, 1900 + date->tm_year, date->tm_hour, date->tm_min);
     fileRaw.open(fileName);
@@ -93,12 +125,96 @@ int main()
 
     cout << "Client connected" << endl;
 
-    unsigned long totalRead = 0;
-    unsigned int offsert = 0;
 
     int size;
-    int ret = recv(sock, &size, sizeof(size), 0);
+    recv(sock, &size, sizeof(size), 0);
+
+    if (size) {
+        cout << size << " MB" << endl;
+        getData(size);
+    }
+    else {
+        int chanNum;
+        recv(sock, &chanNum, sizeof(chanNum), 0);
+
+        cout << "Ctrl-C for stop" << endl;
+        getInfData(chanNum);
+    }
+#ifdef USE_EXTRACT
+    for (int i=0; i < CHANNEL_NUM; i++) {
+        file8[i].close();
+        file16[i].close();
+        fileGR32[i].close();
+    }
+#endif
+    close(sock);
+    close(listener);
+
+    return 0;
+}
+
+void getInfData(int chanNum) {
+    unsigned int offsert = 0;
     int last_prog = 0;
+    int skiped = 0;
+
+    while(1) {
+        int ret = recv(sock, buf + offsert, sizeof(buf), MSG_WAITALL);
+        //cout << ret << endl;
+
+        if (skiped < SKIP_BYTES) {
+            skiped += ret;
+            continue;
+        }
+
+        if(ret < 0) {
+            perror("recv error");
+            break;
+        }
+        else if (ret == 0) {
+            cout << "Connection closed" << endl;
+            break;
+        } else {
+            ret += offsert;
+            offsert = ret % 32;
+            ret -= offsert;
+
+            totalRead += ret;
+#ifdef USE_EXTRACT
+            for (int i=0; i < ret/2; i += chanNum*SAMPLE_IQ) {
+                for (int j=0; j < chanNum; j+=1) {
+                    channelBuf16[j][i/(chanNum)] = buf16[i+j*SAMPLE_IQ];
+                    channelBufGR32[j][i/(chanNum)] = buf16[i+j*SAMPLE_IQ];
+                    channelBuf8[j][i/(chanNum)] = (buf16[i+j*SAMPLE_IQ] >> 8) & 0xFF;
+#if (SAMPLE_IQ == 2)
+                    channelBuf16[j][i/(chanNum) + 1] = buf16[i+j*SAMPLE_IQ + 1];
+                    channelBufGR32[j][i/(chanNum) + 1] = buf16[i+j*SAMPLE_IQ + 1];
+                    channelBuf8[j][i/(chanNum) + 1] = (buf16[i+j*SAMPLE_IQ + 1] >> 8) & 0xFF;
+#endif
+                }
+            }
+
+
+
+
+            for (int i=0; i < chanNum; i++) {
+                file8[i].write((char*)(channelBuf8[i]), ret/2/8);
+                file16[i].write((char*)(channelBuf16[i]), ret/8);
+                fileGR32[i].write((char*)(channelBufGR32[i]), ret/8);
+            }
+#endif
+            fileRaw.write(buf, ret);
+            memcpy(buf, buf+ret, offsert);
+
+        }
+    }
+}
+
+void getData(int size) {
+    unsigned long totalRead = 0;
+    unsigned int offsert = 0;
+    int last_prog = 0;
+    int chanNum = 8;
 
     while(1) {
         int ret = recv(sock, buf + offsert, sizeof(buf), 0);
@@ -112,7 +228,7 @@ int main()
             break;
         } else {
             ret += offsert;
-            offsert = ret % 16;
+            offsert = ret % 32;
             ret -= offsert;
 
             totalRead += ret;
@@ -122,34 +238,29 @@ int main()
                 cout << totalRead << "/" << size << " (" << prog << "%)" << endl;
                 last_prog = prog;
             }
-
-            for (int i=0; i < ret/2; i += CHANNEL_NUM) {
-                for (int j=0; j < CHANNEL_NUM; j++) {
-                    channelBuf16[j][i/8] = buf16[i+j];
-                    channelBuf8[j][i/8] = (buf16[i+j] >> 8) & 0xFF;
+#ifdef USE_EXTRACT
+            for (int i=0; i < ret/2; i += chanNum*SAMPLE_IQ) {
+                for (int j=0; j < chanNum; j+=1) {
+                    channelBuf16[j][i/(chanNum)] = buf16[i+j*SAMPLE_IQ];
+                    //channelBufGR32[j][i/(chanNum)] = buf16[i+j*SAMPLE_IQ];
+                    channelBuf8[j][i/(chanNum)] = (buf16[i+j*SAMPLE_IQ] >> 8) & 0xFF;
+#if (SAMPLE_IQ == 2)
+                    channelBuf16[j][i/(chanNum) + 1] = buf16[i+j*SAMPLE_IQ + 1];
+                    //channelBufGR32[j][i/(chanNum) + 1] = buf16[i+j*SAMPLE_IQ + 1];
+                    channelBuf8[j][i/(chanNum) + 1] = (buf16[i+j*SAMPLE_IQ + 1] >> 8) & 0xFF;
+#endif
                 }
             }
 
-            for (int i=0; i < CHANNEL_NUM; i++) {
+            for (int i=0; i < chanNum; i++) {
                 file8[i].write((char*)(channelBuf8[i]), ret/2/8);
-                file16[i].write((char*)(channelBuf16[i]), ret/8);
+                file16[i].write((char*)(channelBuf16[i]), ret/16 * sizeof(int16_t));
+                //fileGR32[i].write((char*)(channelBufGR32[i]),  ret/16 * sizeof(float));
             }
-
+#endif
             fileRaw.write(buf, ret);
             memcpy(buf, buf+ret, offsert);
 
         }
     }
-
-    for (int i=0; i < CHANNEL_NUM; i++) {
-        file8[i].close();
-        file16[i].close();
-    }
-
-    cout << "Recieved " << totalRead/1024/1024 << "MB" << endl;
-
-    close(sock);
-    close(listener);
-
-    return 0;
 }
