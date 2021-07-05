@@ -51,7 +51,11 @@ channel - number of channel inrange [0;7]
 UDP_rec.grc - UDP server on GNU-Radio
 - **NUT8_DMA2TCP** - send 500MB of data with all channels.
 usage `$ NUT8_DMA2TCP address`
+- **NUT8_DMA2TCP_5MHz** - send data by TCP.
+usage `$ NUT8_DMA2TCP address`
 - **NUT8_TCP2Files** - TCP server for recieve dumps from all channels
+- **NUT8_File2Channels** - Splits a dump into the data of each channel
+usage `$ NUT8_File2Channels -g fileIn fileOut`
 - **GNSS_SDR_Class-ComplexAndCNo** - matlab scripts for testing dumps adn fin. In initSettings.m you can change dump file and correlation search
 
 # Build soft
@@ -66,7 +70,7 @@ usage `$ NUT8_DMA2TCP address`
 2.3. `$ make`
 
 # Install soft
- **nut8_init, NUT8_DMA2UDP, NUT8_DMA2TCP** you must send on NUT8NT via FTP or copy on sd in /home/root
+ **nut8_init, NUT8_DMA2UDP, NUT8_DMA2TCP_5MHz** you must send on NUT8NT via FTP or copy on sd in /home/root
  Copy files **ConfigSet_all_GPS_L1_patched_ldvs_noadc.hex** and **Init_NUT8.sh** to /home/root
  
  # Run
@@ -75,28 +79,6 @@ usage `$ NUT8_DMA2TCP address`
  2. Start TCP server on host computer
  `$ NUT8_TCP2Files`
  3. Get data on NUT8
-  `$ NUT8_DMA2TCP address`
-  You should see something like this
-```
-root@xdma_petalinux:~# ./NUT8_DMA2TCP 192.168.1.151
-DMA init
-Statusreg[0] = 0xE0FAAAAA
- Can't write /sys/class/gpio/export for GPIO 88: Device or resource busy
-DMA proxy test
-Buffer size = 524288000
- == 8000 65536 ==
-generate ptr table
-startCyclic start
-thread_f start 0
-Time: 6.000001
-Socket successfully created..
-connected to the server..
-Sending..
-Done!
-exp = 32000
-DMA proxy test complete
-evt_count = 31994
-FIFO full: 0
-FIFO empty: 0
-```
-4.  Near NUT8_TCP2Files  on the host computer will be records
+  `$ NUT8_DMA2TCP_5MHz address`
+ 4. Near NUT8_TCP2Files  on the host computer will be records
+ 5. Run NUT8_File2Channels 
