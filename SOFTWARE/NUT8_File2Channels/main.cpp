@@ -2,7 +2,7 @@
 #include <fstream>
 
 #define CHANNELS    4
-#define BUF_SIZE    1024
+#define BUF_SIZE    (1024 * 512)
 
 using namespace std;
 
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 
     cout << "File size: " << fsize << endl;
 
-    char* data = new char[fsize];
+    char* data = new char[BUF_SIZE];
     int32_t* data32 = (int32_t*)data;
     int16_t* data16 = (int16_t*)data;
 
@@ -96,18 +96,19 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    file.read(data, fsize);
 
-    unsigned long last_prog = 0;
 
-    for (unsigned long i=0; i < fsize/sizeof(uint32_t); i += BUF_SIZE) {
+    unsigned long long last_prog = 0;
 
-        unsigned long  j;
-        for (j=0; (j < BUF_SIZE) && ((j+i) < fsize/sizeof(uint32_t)); j += CHANNELS) {
+    for (unsigned long long i=0; i < fsize / BUF_SIZE; i ++) {
+        file.read(data, BUF_SIZE);
+
+        unsigned long long  j;
+        for (j=0; j < BUF_SIZE / sizeof(uint32_t); j += CHANNELS) {
             for (int ch=0; ch < CHANNELS; ch++) {
                 if (shortFlag) {
-                    sh16[ch][j/2] = data16[(i+j+ch)*2];
-                    sh16[ch][j/2+1] = data16[(i+j+ch)*2 + 1];
+                    sh16[ch][j/2] = data16[(j+ch)*2];
+                    sh16[ch][j/2+1] = data16[(j+ch)*2 + 1];
                 }
 
                 if (charFlag) {
@@ -131,7 +132,7 @@ int main(int argc, char *argv[]) {
                 fileGRC[ch].write((char*)gr32[ch], j*sizeof(float)/2);
         }
 
-        unsigned long prog = i * 100 / (fsize / sizeof(uint32_t));
+        unsigned long long prog = i * 100 / (fsize / BUF_SIZE);
         if (last_prog != prog) {
             cout << "\r                                 \r";
             cout << i * sizeof(uint32_t) << "/" << fsize << " (" << prog << "%)";

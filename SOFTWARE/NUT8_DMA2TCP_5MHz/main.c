@@ -10,24 +10,40 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include "dma-proxy.h"
 #include <stdint.h>
 
 #define GPIO_FIFO       88
+#define GPIO_ADS_COUTER 99
 #define GPIO_BASE       338
 #define GPIO_DIR_IN     0
 #define GPIO_DIR_OUT    1
 
-#define PERIOD      80
+#define PERIOD      40
 #define DIV         1
 #define BUFF_COUNT  (8000)
-#define BUFF_SIZE   (1024*32)
-#define TIMEOUT     40
+#define BUFF_SIZE   (1024*64)
+#define SUBBUFF_COUNT   (BUFF_COUNT/PERIOD)
+#define SUBBUFF_SIZE    (BUFF_SIZE*PERIOD)
+#define TIMEOUT     4000
 
 #define USE_SERVER
 //#define TEST_COUNTER
+
+#define min(x,y) (x < y ? x:y)
+//#define CYCLIC_DISTANCE(x, y, r) (min((x - y) % r, (y - x) % r))
+
+int CYCLIC_DISTANCE(int a, int b, int r) {
+    int ret = b - a;
+
+    if (ret < 0)
+        ret += r;
+
+    return ret;
+}
 
 static int test_size;
 
@@ -52,27 +68,34 @@ int err = 0;
 uint64_t total_send = 0;
 
 #ifdef TEST_COUNTER
-uint32_t last = 0;
+uint32_t lastL = 0;
+uint32_t lastF = 0;
 #endif
-int iter = 0;
+volatile uint32_t iterLast = 100;
+volatile uint32_t iterFirst = 50;
 
 void init(int bn, int len);
 void startCyclic(int c, int timeout);
 int connect_to_server(char* addr);
+double proc = 0.0;
 
 void thread_f() {
     int strSize;
     char str[32];
-    uint32_t totalSendLast = 0;
+    uint64_t totalSendLast = 0;
+    float procLast = 0.0;
+    int evt_countLast = 0;
     printf("Send speed: ");
     sleep(2);
+    int time = 0;
 
     while (!stop) {
-        sprintf(str,"%d MByte/s", (total_send - totalSendLast)/1024/1024);
+        sprintf(str,"%ld MByte/s (%d s), %.2f %%", (total_send - totalSendLast)/1024/1024, time);
         strSize = strlen(str);
-        printf("%s", str);
+        printf("\r%s", str);
 
         totalSendLast = total_send;
+        time ++;
         fflush(stdout);
 
 
@@ -80,8 +103,67 @@ void thread_f() {
         if (stop)
             break;
 
+        /*
         for (int i=0; i<strSize; i++)
             printf("%c", '\b');
+            */
+    }
+}
+
+void thread_send() {
+    int sendBuffSize = BUFF_SIZE * PERIOD;
+    int res = setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sendBuffSize, sizeof(sendBuffSize));
+
+    if(res == -1)
+         printf("Error SO_SNDBUF");
+     else
+         printf("send buffer size = %d\n", sendBuffSize);
+
+    int one = 1;
+    res = setsockopt (sockfd, SOL_SOCKET, SO_DONTROUTE, &one, sizeof (one));
+
+    if(res == -1)
+         printf("Error SO_DONTROUTE");
+     else
+         printf("SO_DONTROUTE = %d\n", one);
+
+    while (evt_count < 110) {
+        usleep(1000);
+    }
+
+    while (stop == 0) {
+        while (CYCLIC_DISTANCE(iterFirst, iterLast, SUBBUFF_COUNT) < 20) {
+            usleep(500);
+        }
+#ifdef TEST_COUNTER
+    if (evt_count > 100) {
+        uint32_t first = ((uint32_t*)(buff_ptr[iterFirst]))[3];
+        //uint32_t last = ((uint32_t*)(buff_ptr[iter_test]))[0];
+
+
+        if (first - lastF != BUFF_SIZE/16*PERIOD && evt_count > 100) {
+            printf (" F: dif(f-l) = %X, index = %X, f = %X, l = %X, exp = %X, iterFirst = %d, iterLast = %d\n", first - lastF, evt_count, first, lastF, BUFF_SIZE / 32 * PERIOD, iterFirst, iterLast);
+            //fifo_empty++;
+        }
+
+        lastF = first;
+    }
+#endif
+
+
+#ifdef USE_SERVER
+        int ret = send(sockfd, buff_ptr[iterFirst], BUFF_SIZE * PERIOD, MSG_DONTROUTE);
+        //usleep(35000000);
+        //ret = BUFF_SIZE * PERIOD;
+        if (ret < BUFF_SIZE * PERIOD) {
+            printf("send err %d\n", ret);
+        }
+#else
+        int ret = BUFF_SIZE * PERIOD;
+#endif
+
+        iterFirst = (iterFirst + 1) % (SUBBUFF_COUNT);
+        total_send += ret;
     }
 }
 
@@ -108,41 +190,56 @@ void callbackf(int n, siginfo_t *info, void *unused) {
     }
 
     int iter_test;
-    if (evt_count > 10) {
-        iter_test = iter;
-        iter = (iter + 1) % (BUFF_COUNT/PERIOD);
+    if (evt_count > 100) {
+        iter_test = iterLast;
+        iterLast = (iterLast + 1) % (SUBBUFF_COUNT);
+
+        if (CYCLIC_DISTANCE(iterLast, iterFirst, SUBBUFF_COUNT) < 5) {
+            //printf("%d %d %d\n", iterLast, iterFirst, CYCLIC_DISTANCE(iterLast, iterFirst, SUBBUFF_COUNT));
+            printf("\nTo slow send speed. Error!\n\n");
+            iterFirst = (iterLast - 20) % (SUBBUFF_COUNT);
+        }
     }
 
 #ifdef TEST_COUNTER
-    uint32_t first = ((uint32_t*)(buff_ptr[iter]))[0];
-    //uint32_t last = ((uint32_t*)(buff_ptr[iter_test]))[0];
-
-
-    if (first - last != BUFF_SIZE/16*PERIOD && evt_count > 100) {
-        printf (" dif(f-l) = %X, index = %X, f = %X, l = %X, exp = %X\n", first - last, evt_count, first, last, BUFF_SIZE/32*PERIOD);
-        fifo_empty++;
-    }
-
-    last = first;
-#endif
-
-#ifdef USE_SERVER
-    int it = 0;
-
     if (evt_count > 100) {
-        int ret = send(sockfd, buff_ptr[iter], BUFF_SIZE * PERIOD, 0);
-        if (ret < BUFF_SIZE * PERIOD) {
-            printf("send err %d\n", ret);
+        uint32_t first = ((uint32_t*)(buff_ptr[iterLast]))[3];
+        //uint32_t last = ((uint32_t*)(buff_ptr[iter_test]))[0];
+
+
+        if (first - lastL != BUFF_SIZE/16*PERIOD && evt_count > 100) {
+            printf (" L: dif(f-l) = %X, index = %X, f = %X, l = %X, exp = %X\n", first - lastL, evt_count, first, lastL, BUFF_SIZE / 32 * PERIOD);
+            //fifo_empty++;
         }
-        total_send += ret;
+
+        lastL = first;
     }
 #endif
+
+
+//    struct timespec begin;
+//    struct timespec end;
+//    clock_gettime(CLOCK_REALTIME, &begin);
+
+//    //usleep(2000);
+
+
+//    clock_gettime(CLOCK_REALTIME, &end);
+//    double time = (end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec);
+//    float exp_time = (float)BUFF_SIZE * PERIOD / 4 / 4 / 5;
+//    if (time < 0)
+//        proc += 0;
+//    else
+//        proc += (time / 1000) / ( exp_time) * 100;
+    //printf("Time: %.2f / %.2f us (%f %%)\n", time / 1000, exp_time, (time / 1000) / ( exp_time) * 100);
+    //printf("c %d %d %d\n", iterLast, iterFirst, CYCLIC_DISTANCE(iterLast, iterFirst, SUBBUFF_COUNT));
 
     evt_count++;
 }
 
 int main(int argc, char *argv[])
 {
+    printf("Starting %s...\n", argv[0]);
     signal(SIGINT, sig_int_handler);
     signal(SIGTERM, sig_int_handler);
 #ifdef USE_SERVER
@@ -150,6 +247,7 @@ int main(int argc, char *argv[])
         printf("usage: %s addr\n", argv[0]);
         return 0;
     }
+
 
     if (connect_to_server(argv[1]) != 0) {
         return 0;
@@ -160,10 +258,14 @@ int main(int argc, char *argv[])
         sendbuff[i] = b++;
     }
 
+    GPIO(GPIO_ADS_COUTER, GPIO_DIR_OUT);
+
+    GPIOout(GPIO_ADS_COUTER, 0);
+
     init(BUFF_COUNT, BUFF_SIZE);
 
-    pthread_t th;
-    pthread_create(&th, NULL, &thread_f, NULL);
+    pthread_t th1;
+    pthread_create(&th1, NULL, &thread_f, NULL);
 
     printf("generate ptr table\n");
     for (int i=0; i<BUFF_COUNT/PERIOD; i++) {
@@ -171,6 +273,10 @@ int main(int argc, char *argv[])
     }
 
     printf("start cyclic DMA\n");
+
+    pthread_t th2;
+    pthread_create(&th2, NULL, &thread_send, NULL);
+
     startCyclic(rx_proxy_interface_p->buf_num*0, TIMEOUT);
 
     munmap(rx_proxy_interface_p, sizeof(struct dma_proxy_channel_interface));
@@ -380,14 +486,10 @@ void startCyclic(int c, int timeout) {
     struct timespec end;
     clock_gettime(CLOCK_REALTIME, &begin);
     while(stop == 0){
-        clock_gettime(CLOCK_REALTIME, &end);
-        double elapsed_secs = (end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec) / 1e9;
+        usleep(1000);
 
-        usleep(10);
-
-        if (timeout)
-            if(elapsed_secs > timeout) break;
     }
+    clock_gettime(CLOCK_REALTIME, &end);
     double time = (end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec) / 1e9;
     printf("Time: %f %f\n", time, time*80);
     int dummy;

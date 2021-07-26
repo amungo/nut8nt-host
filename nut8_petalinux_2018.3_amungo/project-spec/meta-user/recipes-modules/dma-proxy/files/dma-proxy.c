@@ -77,21 +77,21 @@ MODULE_LICENSE("GPL");
  */
 
 struct dma_proxy_channel {
-	struct dma_proxy_channel_interface *interface_p;	/* user to kernel space interface */
-	dma_addr_t interface_phys_addr;
+    struct dma_proxy_channel_interface *interface_p;	/* user to kernel space interface */
+    dma_addr_t interface_phys_addr;
 
-	struct device *proxy_device_p;				/* character device support */
-	struct device *dma_device_p;
-	dev_t dev_node;
-	struct cdev cdev;
-	struct class *class_p;
+    struct device *proxy_device_p;				/* character device support */
+    struct device *dma_device_p;
+    dev_t dev_node;
+    struct cdev cdev;
+    struct class *class_p;
 
-	struct dma_chan *channel_p;				/* dma support */
-	struct completion cmp;
-	dma_cookie_t cookie;
-	dma_addr_t dma_handle;
-	u32 direction;						/* DMA_MEM_TO_DEV or DMA_DEV_TO_MEM */
-	struct scatterlist sglist;
+    struct dma_chan *channel_p;				/* dma support */
+    struct completion cmp;
+    dma_cookie_t cookie;
+    dma_addr_t dma_handle;
+    u32 direction;						/* DMA_MEM_TO_DEV or DMA_DEV_TO_MEM */
+    struct scatterlist sglist;
     struct scatterlist* sglistArray;
     uint8_t curret_buffer;
     volatile bool loop;
@@ -113,8 +113,9 @@ static struct dma_proxy_channel channels[CHANNEL_COUNT];
 struct task_struct	*task;
 struct siginfo sinfo;
 static void send_signal(struct dma_proxy_channel *pchannel_p, uint32_t signal_data){
-    if(pchannel_p->signal_pid){
+    if(pchannel_p->signal_pid) {
         sinfo.si_signo = signal_data;
+        //printk(KERN_INFO "DMA send_signal %d %d\n", (pchannel_p->loopcount) % pchannel_p->interface_p->buf_num, signal_data);
 
         if(task != NULL) {
             send_sig_info(SIGIO, &sinfo, task);
@@ -123,17 +124,17 @@ static void send_signal(struct dma_proxy_channel *pchannel_p, uint32_t signal_da
 }
 
 
-static void sync_callback(void *completion)
-{
+static void sync_callback(void *completion) {
     printk(KERN_INFO "[DMA] sync_callback\n");
-	complete(completion);
+    complete(completion);
 }
 
 static void cyclic_callback(void *data) {
     struct dma_proxy_channel *pchannel_p = data;
     pchannel_p->loopcount++;
-    if ((pchannel_p->loopcount % pchannel_p->sig_per) == pchannel_p->sig_per - 1)
-        send_signal(pchannel_p, (pchannel_p->loopcount - pchannel_p->sig_per) % pchannel_p->interface_p->buf_num);
+    if ((pchannel_p->loopcount % pchannel_p->sig_per) == pchannel_p->sig_per - 1) {
+        send_signal(pchannel_p, (pchannel_p->loopcount) % pchannel_p->interface_p->buf_num);
+    }
 
     if (pchannel_p->maxloops != 0  && pchannel_p->loopcount == pchannel_p->maxloops) {
         pchannel_p->channel_p->device->device_terminate_all(pchannel_p->channel_p);
@@ -267,12 +268,15 @@ static void transfer_loop(struct dma_proxy_channel *pchannel_p)
     /* For now use a single entry in a scatter gather list just for future
      * flexibility for scatter gather.
      */
-    sg_init_table(&pchannel_p->sglist, 1);
-    sg_dma_address(&pchannel_p->sglist) = pchannel_p->dma_handle;
-    sg_dma_len(&pchannel_p->sglist) = interface_p->length;
+    sg_init_table(pchannel_p->sglistArray, interface_p->buf_num);
+    unsigned int i;
+    for (i=0; i < interface_p->buf_num; i++) {
+        sg_dma_address(pchannel_p->sglistArray + i) = pchannel_p->dma_handle + i * interface_p->length;//(dma_addr_t)(pchannel_p->interface_phys_addr + offsetof(struct dma_proxy_channel_interface, buffer[i]));
+        sg_dma_len(pchannel_p->sglistArray + i) = interface_p->length;
+    }
 
-    chan_desc = dma_device->device_prep_slave_sg(pchannel_p->channel_p, &pchannel_p->sglist, 1,
-                        pchannel_p->direction, flags, NULL);
+    chan_desc = dma_device->device_prep_slave_sg(pchannel_p->channel_p, pchannel_p->sglistArray, interface_p->buf_num, pchannel_p->direction, flags, NULL);
+
 
     /* Make sure the operation was completed successfully
      */
