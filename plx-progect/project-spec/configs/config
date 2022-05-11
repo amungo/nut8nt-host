@@ -27,7 +27,7 @@ CONFIG_SUBSYSTEM_COMPONENT_LINUX__KERNEL_NAME_EXT__LOCAL__SRC=y
 #
 # External linux-kernel local source settings
 #
-CONFIG_SUBSYSTEM_COMPONENT_LINUX__KERNEL_NAME_EXT_LOCAL_SRC_PATH="/media/ivan/HDD/ViktorWorkspace/nut8-ar-krio-2020.2_2/ext/linux-xlnx/media/ivan/HDD/ViktorWorkspace/nut8-ar-krio-2020.2_2/ext/linux-xlnx"
+CONFIG_SUBSYSTEM_COMPONENT_LINUX__KERNEL_NAME_EXT_LOCAL_SRC_PATH="${TOPDIR}/../ext/linux-xlnx/media/ivan/HDD/ViktorWorkspace/nut8-ar-krio-2020.2_2/ext/linux-xlnx"
 CONFIG_SUBSYSTEM_COMPONENT_LINUX__KERNEL_LIC_FILES_CHKSUM_LOCAL__SRC=""
 
 #
