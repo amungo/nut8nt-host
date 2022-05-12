@@ -1,4 +1,4 @@
-#define DMA_BUFFER_SIZE (500 * 1024 * 1024)	 	/* must match driver exactly */
+#define DMA_BUFFER_SIZE (32 * 1024 * 1024)	 	/* must match driver exactly */
 #define BUFFER_COUNT 1					/* driver only */
 
 #define TX_BUFFER_COUNT 	1				/* app only, must be <= to the number in the driver */
@@ -16,7 +16,9 @@ enum PROXY_DMA_REQUEST {
     PROXY_DMA_CYCLIC_START = 9,
     PROXY_DMA_CYCLIC_STOP = 10,
     PROXY_DMA_LOOP_STOP = 4, // nu
-    PROXY_DMA_SET_SIGNAL = 3
+    PROXY_DMA_SET_SIGNAL = 3,
+	RPOXY_DMA_WRITE = 11,
+	RPOXY_DMA_RESET = 12
 };
 
 typedef struct signal_parameters{

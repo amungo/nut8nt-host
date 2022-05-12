@@ -171,6 +171,9 @@ struct dma_proxy_channel {
     uint32_t sig_per;
     uint32_t loopcount;
     uint32_t maxloops;
+    
+        struct task_struct	*task;
+	struct kernel_siginfo sinfo;
 };
 
 struct dma_proxy {
@@ -190,18 +193,17 @@ static void sync_callback(void *completion)
 	/* Indicate the DMA transaction completed to allow the other
 	 * thread of control to finish processing
 	 */
+	//printk(KERN_INFO "sync_callback\n");
 	complete(completion);
 }
 
-struct task_struct	*task;
-struct kernel_siginfo sinfo;
 static void send_signal(struct dma_proxy_channel *pchannel_p, uint32_t signal_data){
     if(pchannel_p->signal_pid) {
-        sinfo.si_signo = signal_data;
+        //pchannel_p->sinfo.si_signo = signal_data;
         //printk(KERN_INFO "DMA send_signal %d %d\n", (pchannel_p->loopcount) % pchannel_p->interface_p->buf_num, signal_data);
 
-        if(task != NULL) {
-            send_sig_info(SIGIO, &sinfo, task);
+        if(pchannel_p->task != NULL) {
+            send_sig_info(pchannel_p->sinfo.si_signo, &pchannel_p->sinfo, pchannel_p->task);
         }
     }
 }
@@ -408,9 +410,9 @@ static int mmap(struct file *file_p, struct vm_area_struct *vma)
 {
 	struct dma_proxy_channel *pchannel_p = (struct dma_proxy_channel *)file_p->private_data;
 
-	return dma_mmap_coherent(pchannel_p->dma_device_p, vma,
-					   pchannel_p->buffer_table_p, pchannel_p->buffer_phys_addr,
-					   vma->vm_end - vma->vm_start);
+    return dma_mmap_coherent(pchannel_p->dma_device_p, vma,
+                       pchannel_p->buffer_table_p, pchannel_p->buffer_phys_addr,
+                       vma->vm_end - vma->vm_start);
 }
 
 /* Open the device file and set up the data pointer to the proxy channel data for the
@@ -450,16 +452,16 @@ static long ioctl(struct file *file, unsigned int req , unsigned long arg)
 {
     int ret = 0;
 	struct dma_proxy_channel *pchannel_p = (struct dma_proxy_channel *)file->private_data;
-
+    //printk(KERN_INFO "[DMA ioctl] %X\n", (struct dma_proxy_channel *)file->private_data);
 
     switch (req) {
 
     case PROXY_DMA_SYNC_READ_ALL_BUFFERS: {
-            printk(KERN_INFO "[DMA ioctl] PROXY_DMA_SYNC_READ_ALL_BUFFERS\n");
-            //transfer_allb(pchannel_p);
+        printk(KERN_INFO "[DMA ioctl] PROXY_DMA_SYNC_READ_ALL_BUFFERS\n");
+		//transfer_allb(pchannel_p);
 
-        }
-        break;
+	}
+	break;
 
     case PROXY_DMA_CYCLIC_START: {
             printk(KERN_INFO "[DMA ioctl] PROXY_DMA_CYCLIC_START %d %d\n", pchannel_p->buffer_table_p->buf_num, pchannel_p->buffer_table_p->length);
@@ -470,11 +472,28 @@ static long ioctl(struct file *file, unsigned int req , unsigned long arg)
         break;
 
     case PROXY_DMA_CYCLIC_STOP: {
-            pchannel_p->channel_p->device->device_terminate_all(pchannel_p->channel_p);
+            //pchannel_p->channel_p->device->device_terminate_all(pchannel_p->channel_p);
             printk(KERN_INFO "[DMA ioctl] PROXY_DMA_CYCLIC_STOP %u\n", pchannel_p->loopcount);
             ret = pchannel_p->loopcount;
         }
         break;
+	
+	
+	case RPOXY_DMA_WRITE: {
+		uint32_t size = arg;
+		
+		//pchannel_p->channel_p->device->device_terminate_all(pchannel_p->channel_p);
+        //printk(KERN_INFO "[DMA ioctl] RPOXY_DMA_WRITE %u\n", size);
+		pchannel_p->buffer_table_p[0].length = size;
+        start_transfer(pchannel_p);
+        wait_for_transfer(pchannel_p);
+	}
+	break;
+
+	case RPOXY_DMA_RESET: {
+		pchannel_p->channel_p->device->device_terminate_all(pchannel_p->channel_p);
+	}
+	break;
 
     case PROXY_DMA_SET_SIGNAL: {
             signal_parameters* sig_params = (signal_parameters*)arg;
@@ -488,10 +507,10 @@ static long ioctl(struct file *file, unsigned int req , unsigned long arg)
                 pchannel_p->signal_pid = 0;
             }
 
-            memset(&sinfo, 0, sizeof(struct siginfo));
-            sinfo.si_signo = SIGIO;
-            sinfo.si_code  = SI_QUEUE;
-            task = pid_task(find_vpid(pchannel_p->signal_pid), PIDTYPE_PID);
+            //memset(&pchannel_p->sinfo, 0, sizeof(struct siginfo));
+            pchannel_p->sinfo.si_signo = sig_params->on;
+            pchannel_p->sinfo.si_code  = SI_QUEUE;
+            pchannel_p->task = pid_task(find_vpid(pchannel_p->signal_pid), PIDTYPE_PID);
         }
         break;
     default:
@@ -521,7 +540,7 @@ static int cdevice_init(struct dma_proxy_channel *pchannel_p, char *name)
 	static struct class *local_class_p = NULL;
 
 	/* Allocate a character device from the kernel for this driver.
-	 */
+     */
 	rc = alloc_chrdev_region(&pchannel_p->dev_node, 0, 1, "dma_proxy");
 
 	if (rc) {
@@ -531,7 +550,7 @@ static int cdevice_init(struct dma_proxy_channel *pchannel_p, char *name)
 
 	/* Initialize the device data structure before registering the character 
 	 * device with the kernel.
-	 */
+     */
 	cdev_init(&pchannel_p->cdev, &dm_fops);
 	pchannel_p->cdev.owner = THIS_MODULE;
 	rc = cdev_add(&pchannel_p->cdev, pchannel_p->dev_node, 1);
@@ -705,10 +724,10 @@ static int dma_proxy_probe(struct platform_device *pdev)
 	/* Create the channels in the proxy. The direction does not matter
 	 * as the DMA channel has it inside it and uses it, other than this will not work 
 	 * for cyclic mode.
-	 */
+     */
 	for (i = 0; i < lp->channel_count; i++) {
-		printk("Creating channel %s\r\n", lp->names[i]);
-		rc = create_channel(pdev, &lp->channels[i], lp->names[i], DMA_MEM_TO_DEV);
+        printk("Creating channel %s\r\n", lp->names[i]);
+        rc = create_channel(pdev, &lp->channels[i], lp->names[i], DMA_MEM_TO_DEV);
 
 		if (rc) 
 			return rc;
